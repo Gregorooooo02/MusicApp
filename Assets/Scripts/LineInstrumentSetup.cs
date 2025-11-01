@@ -75,7 +75,42 @@ public class LineInstrumentSetup : MonoBehaviour
         input.GetType().GetField("lineInstrument", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(input, lineInstr);
         input.GetType().GetField("mainCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(input, Camera.main);
 
+        // Dodanie InputControllerV2 (nowa wersja obsługująca wiele instrumentów)
+        InputControllerV2 inputV2 = root.AddComponent<InputControllerV2>();
+        inputV2.GetType().GetField("mainCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(inputV2, Camera.main);
+
         Debug.Log("LineInstrument setup completed!");
+    }
+
+    [ContextMenu("Setup Point Instrument")]
+    public void SetupPointInstrument()
+    {
+        // Tworzenie głównego obiektu
+        GameObject root = new GameObject("PointInstrumentRoot");
+        root.transform.position = new Vector3(3, 0, 0); // Obok linii
+
+        // Tworzenie sprite'a koła
+        SpriteRenderer spriteRenderer = root.AddComponent<SpriteRenderer>();
+        spriteRenderer.sprite = CreateCircleSprite(0.4f);
+        spriteRenderer.color = Color.white;
+        spriteRenderer.sortingOrder = 1;
+
+        // Dodanie PointInstrument komponentu
+        PointInstrument pointInstr = root.AddComponent<PointInstrument>();
+        pointInstr.spriteRenderer = spriteRenderer;
+
+        // Dodanie AudioSource dla syntezy
+        AudioSource audioSource = root.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+        audioSource.spatialBlend = 0f; // 2D audio
+
+        // Dodanie PointAudioSynthesizer
+        PointAudioSynthesizer synth = root.AddComponent<PointAudioSynthesizer>();
+
+        // Dodanie PointAnimator
+        PointAnimator animator = root.AddComponent<PointAnimator>();
+
+        Debug.Log("PointInstrument setup completed!");
     }
 
     [ContextMenu("Setup Debug UI")]

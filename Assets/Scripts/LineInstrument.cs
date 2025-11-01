@@ -82,7 +82,6 @@ public class LineInstrument : MonoBehaviour
     }
 
     /// <summary>
-    /// <summary>
     /// Uaktualnia pozycję końca linii (zarazem zmienia oktawę i pitch).
     /// Używane przy przesuwaniu głównego końca linii.
     /// </summary>
@@ -92,6 +91,7 @@ public class LineInstrument : MonoBehaviour
         UpdateLineRenderer();
         UpdatePitchFromGeometry();
         CheckAndPlayNote();
+        UpdateDeformer();
     }
 
     /// <summary>
@@ -102,6 +102,7 @@ public class LineInstrument : MonoBehaviour
     {
         _circleCenterWorld = newCircleCenter;
         UpdateLineRenderer();
+        UpdateDeformer();
     }
 
     /// <summary>
@@ -171,6 +172,16 @@ public class LineInstrument : MonoBehaviour
         
         if (circleMarker != null)
             circleMarker.position = _circleCenterWorld;
+    }
+
+    /// <summary>
+    /// Uaktualnia pozycje bazowe w LineDeformer.
+    /// </summary>
+    private void UpdateDeformer()
+    {
+        var deformer = GetComponent<LineDeformer>();
+        if (deformer != null)
+            deformer.UpdateBasePositions(_rayOriginWorld, _circleCenterWorld);
     }
 
     /// <summary>

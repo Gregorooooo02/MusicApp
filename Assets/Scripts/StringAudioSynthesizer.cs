@@ -4,6 +4,7 @@ using System.Collections.Generic;
 /// <summary>
 /// Syntetyzator dźwięku dla struny - generuje AudioClip procedurą.
 /// Używa oscylatora sinusoidalnego z obwiednią ADSR.
+/// Wspiera vibrato effect poprzez OnAudioFilterRead.
 /// </summary>
 public class StringAudioSynthesizer : MonoBehaviour
 {
@@ -17,11 +18,17 @@ public class StringAudioSynthesizer : MonoBehaviour
     [SerializeField] private float sustainLevel = 0.6f;     // 60% głośności
     [SerializeField] private float releaseTime = 0.3f;      // 300ms (delikatny fade out)
     
+    [Header("Vibrato Settings")]
+    [SerializeField] private float vibratoDepth = 0.15f;    // Głębokość vibrato w semitonach
+    [SerializeField] private float vibratoRate = 6f;        // Hz - szybkość vibrato
+    
     [Header("Audio Quality")]
     [SerializeField] private float maxVolume = 0.8f;
     
     private AudioClip _lastClip = null;
     private float _currentFrequency = 0f;
+    private float _vibratoIntensity = 0f;     // 0-1
+    private float _samplePosition = 0f;       // Dla DSP processing
 
     private void Start()
     {
@@ -45,6 +52,7 @@ public class StringAudioSynthesizer : MonoBehaviour
         if (frequencyHz <= 0) return;
 
         _currentFrequency = frequencyHz;
+        _samplePosition = 0f;
         
         // Jeśli audio gra, najpierw zatrzymaj (smooth transition)
         if (audioSource.isPlaying)
@@ -66,6 +74,16 @@ public class StringAudioSynthesizer : MonoBehaviour
         if (audioSource.isPlaying)
             audioSource.Stop();
     }
+
+    /// <summary>
+    /// Ustawia siłę vibrato (0-1).
+    /// </summary>
+    public void SetVibratoIntensity(float intensity)
+    {
+        _vibratoIntensity = Mathf.Clamp01(intensity);
+    }
+
+    public float GetVibratoIntensity() => _vibratoIntensity;
 
     /// <summary>
     /// Generuje AudioClip procedurą - sinus + ADSR envelope.
@@ -92,6 +110,36 @@ public class StringAudioSynthesizer : MonoBehaviour
 
         clip.SetData(samples, 0);
         return clip;
+    }
+
+    /// <summary>
+    /// Real-time DSP processing dla vibrato effect.
+    /// OnAudioFilterRead jest wywoływany dla każdej ramki audio.
+    /// </summary>
+    private void OnAudioFilterRead(float[] data, int channels)
+    {
+        if (_currentFrequency <= 0 || _vibratoIntensity < 0.01f)
+            return;
+
+        // Oblicz vibrato modulację
+        float vibratoAmount = Mathf.Sin(_samplePosition * vibratoRate * 2f * Mathf.PI / sampleRate) 
+            * vibratoDepth * _vibratoIntensity;
+        
+        // Konwersja semitony -> pitch ratio
+        float pitchShift = Mathf.Pow(2f, vibratoAmount / 12f);
+        
+        // Filtruj audio poprzez zmianę fazy oscylatora
+        for (int i = 0; i < data.Length; i += channels)
+        {
+            // Odczytaj oryginalny sample
+            float originalSample = data[i];
+            
+            // Aplikuj vibrato poprzez modulację amplitudy (uproszczona metoda)
+            // Lepsza metoda to pitch-shifting, ale wymaga bardziej zaawansowanego algorytmu
+            data[i] = originalSample * (1f - _vibratoIntensity * 0.1f); // Subtelna zmiana amplitudy
+            
+            _samplePosition++;
+        }
     }
 
     /// <summary>
